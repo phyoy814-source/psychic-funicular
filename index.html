@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ultimate Notes Pro</title>
+<style>
+:root{--bg:#f4f7fb;--panel:#fff;--text:#172033;--muted:#718096;--primary:#2563eb;--primary2:#1d4ed8;--border:#e2e8f0;--soft:#eff6ff;--danger:#dc2626;--ok:#16a34a;--shadow:0 8px 25px rgba(15,23,42,.08)}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Myanmar",sans-serif;background:var(--bg);color:var(--text)}
+button,input,textarea{font:inherit}button{border:0;cursor:pointer}.app{min-height:100vh;display:flex}
+.sidebar{width:290px;background:#0f172a;color:#fff;position:fixed;inset:0 auto 0 0;padding:16px;overflow:auto;z-index:5}
+.brand{font-size:20px;font-weight:800;margin:4px 4px 16px}.brand small{display:block;font-size:11px;color:#94a3b8;font-weight:400;margin-top:4px}
+.side-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}.side-actions .wide{grid-column:1/-1}
+.btn{padding:9px 11px;border-radius:9px;background:var(--primary);color:#fff;font-weight:700}.btn:hover{background:var(--primary2)}.btn.gray{background:#334155}.btn.red{background:var(--danger)}.btn.green{background:var(--ok)}
+.folder{display:flex;align-items:center;gap:6px;padding:9px;border-radius:9px;margin:5px 0;background:#1e293b;cursor:pointer}.folder.active{background:#2563eb}.folder-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.folder-count{font-size:11px;color:#cbd5e1}.folder .mini{background:transparent;color:#cbd5e1;padding:3px;border-radius:5px}.folder .mini:hover{background:rgba(255,255,255,.15)}
+.main{margin-left:290px;width:calc(100% - 290px);padding:22px;max-width:1300px}
+.topbar{display:flex;gap:10px;align-items:center;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding:2px 0 12px;z-index:3}.search{flex:1;position:relative}.search input{width:100%;padding:12px 40px 12px 14px;border:1px solid var(--border);border-radius:11px;background:var(--panel);outline:none}.search span{position:absolute;right:13px;top:10px;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.header{display:flex;justify-content:space-between;align-items:center;gap:10px}.header h1{font-size:24px;margin:0}.header p{margin:5px 0 0;color:var(--muted)}
+.note{display:flex;gap:10px;align-items:flex-start;margin:9px 0}.note-body{flex:1;min-width:0;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:12px;cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere}.note-body:hover{background:var(--soft)}.note-actions{display:flex;gap:5px}.icon{padding:7px 8px;border-radius:8px;background:#e2e8f0;color:#334155}.icon:hover{background:#cbd5e1}.icon.red{background:#fee2e2;color:#b91c1c}
+.title-row{border-left:4px solid var(--primary);padding:8px 10px;margin:18px 0 7px;display:flex;align-items:center;gap:10px}.title-row h3{margin:0;flex:1;color:var(--primary)}
+.image-box{padding:14px;border:2px dashed var(--border);border-radius:12px;text-align:center}.image-box img{max-width:min(100%,520px);max-height:420px;border-radius:10px;margin-top:10px;display:block;margin-left:auto;margin-right:auto;object-fit:contain}.empty{text-align:center;color:var(--muted);padding:45px 15px}
+.modal{position:fixed;inset:0;background:rgba(2,6,23,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.open{display:flex}.modal-box{width:min(650px,100%);background:var(--panel);border-radius:16px;padding:18px;box-shadow:var(--shadow)}.modal-box h2{margin-top:0}.modal-box input,.modal-box textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;margin:7px 0 12px;outline:none}.modal-box textarea{min-height:150px;resize:vertical}.modal-actions{display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;right:20px;bottom:20px;background:#0f172a;color:#fff;padding:11px 15px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;z-index:30}.toast.show{opacity:1;transform:none}
+@media(max-width:760px){.sidebar{width:235px}.main{margin-left:235px;width:calc(100% - 235px);padding:12px}.topbar{flex-wrap:wrap}.header{align-items:flex-start}.header h1{font-size:20px}.note-actions{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">📚 Ultimate Notes Pro<small>Offline • Auto Save • Copy</small></div>
+  <div class="side-actions">
+    <button class="btn wide" onclick="newFolder()">➕ Folder အသစ်</button>
+    <button class="btn gray" onclick="document.getElementById('txtFile').click()">📄 TXT Import</button>
+    <button class="btn gray" onclick="exportJSON()">💾 Backup</button>
+    <button class="btn gray" onclick="document.getElementById('jsonFile').click()">↩ Restore</button>
+    <button class="btn gray" onclick="toggleTheme()">🌙 Theme</button>
+    <button class="btn red" onclick="clearAll()">🗑️ Clear</button>
+  </div>
+  <input id="txtFile" type="file" accept=".txt" hidden>
+  <input id="jsonFile" type="file" accept=".json" hidden>
+  <div id="folders"></div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="search"><input id="search" placeholder="🔎 စာသား / folder ရှာရန်..." oninput="render()"><span>⌕</span></div>
+    <button class="btn" onclick="newNote()">➕ Note</button>
+  </div>
+  <section class="card">
+    <div class="header">
+      <div><h1 id="folderTitle">Folder မရှိသေးပါ</h1><p id="folderInfo">Folder တစ်ခုဖန်တီးပြီး စတင်ပါ။</p></div>
+    </div>
+  </section>
+  <div id="content"></div>
+</main>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+ <div class="modal-box">
+  <h2 id="modalTitle">Note</h2>
+  <input id="editTitle" placeholder="ခေါင်းစဉ် (optional)">
+  <textarea id="editText" placeholder="စာသားထည့်ပါ..."></textarea>
+  <div class="modal-actions"><button class="btn gray" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveModal()">Save</button></div>
+ </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY="ultimateNotesPro_v1";
+let data=JSON.parse(localStorage.getItem(KEY)||"null")||{folders:{General:[]},active:"General",dark:false};
+let editing=null;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function toast(t){let e=document.getElementById("toast");e.textContent=t;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1300)}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function activeItems(){return data.folders[data.active]||[]}
+
+function render(){
+ const fs=document.getElementById("folders");fs.innerHTML="";
+ const q=document.getElementById("search").value.trim().toLowerCase();
+ Object.entries(data.folders).forEach(([name,items])=>{
+   if(q && !name.toLowerCase().includes(q) && !items.some(x=>x.text.toLowerCase().includes(q)||(x.title||"").toLowerCase().includes(q))) return;
+   const d=document.createElement("div");d.className="folder "+(name===data.active?"active":"");
+   d.innerHTML=`<span>📁</span><span class="folder-name">${esc(name)}</span><span class="folder-count">${items.length}</span>
+   <button class="mini" title="Rename">✏️</button><button class="mini" title="Delete">🗑️</button>`;
+   d.onclick=()=>{data.active=name;save();render()};
+   d.children[3].onclick=e=>{e.stopPropagation();renameFolder(name)};
+   d.children[4].onclick=e=>{e.stopPropagation();deleteFolder(name)};
+   fs.appendChild(d);
+ });
+ const title=document.getElementById("folderTitle"),info=document.getElementById("folderInfo"),content=document.getElementById("content");
+ title.textContent=data.active||"Folder မရှိသေးပါ";
+ const items=activeItems();info.textContent=`${items.length} items • Auto Save ဖွင့်ထားသည်`;
+ content.innerHTML="";
+ if(!data.active){content.innerHTML='<div class="card empty">Folder တစ်ခုဖန်တီးပါ။</div>';return}
+ const shown=items.map((x,i)=>({x,i})).filter(({x})=>!q||x.text.toLowerCase().includes(q)||(x.title||"").toLowerCase().includes(q));
+ if(!shown.length){content.innerHTML='<div class="card empty">ဒီ Folder ထဲမှာ မတွေ့ပါ။<br><br>➕ Note ကိုနှိပ်ပြီး ထည့်နိုင်ပါတယ်။</div>';return}
+ shown.forEach(({x,i})=>{
+   if(x.type==="title"){
+     const r=document.createElement("div");r.className="title-row";r.innerHTML=`<h3>${esc(x.title)}</h3><button class="icon" onclick="editItem(${i})">✏️</button><button class="icon red" onclick="removeItem(${i})">🗑️</button>`;content.appendChild(r);return;
+   }
+   if(x.type==="image"){
+     const r=document.createElement("div");r.className="card image-box";
+     r.innerHTML=`<button class="btn" onclick="replaceImage(${i})">🖼️ ${x.src?"ပုံပြောင်းရန်":"Upload Image"}</button>${x.src?`<img src="${x.src}" ondblclick="preview(this.src)" title="Double click to preview">`:""}<div style="margin-top:8px"><button class="icon" onclick="removeItem(${i})">🗑️ Delete</button></div>`;
+     content.appendChild(r);return;
+   }
+   const r=document.createElement("div");r.className="note";
+   r.innerHTML=`<div class="note-body" title="Click to copy">${esc(x.text)}</div><div class="note-actions"><button class="icon" title="Copy" onclick="copyText(${i})">📋</button><button class="icon" title="Edit" onclick="editItem(${i})">✏️</button><button class="icon red" title="Delete" onclick="removeItem(${i})">🗑️</button></div>`;
+   r.querySelector(".note-body").onclick=()=>copyText(i);content.appendChild(r);
+ });
+}
+
+function newFolder(){
+ const n=prompt("Folder အမည်ထည့်ပါ");if(!n||!n.trim())return;const name=n.trim();
+ if(data.folders[name])return alert("ဒီ Folder ရှိပြီးသားပါ။");data.folders[name]=[];data.active=name;save();render();
+}
+function renameFolder(old){
+ const n=prompt("Folder အမည်အသစ်",old);if(!n||!n.trim()||n.trim()===old)return;const name=n.trim();
+ if(data.folders[name])return alert("ဒီအမည်နဲ့ Folder ရှိပြီးသားပါ။");
+ data.folders[name]=data.folders[old];delete data.folders[old];if(data.active===old)data.active=name;save();render();
+}
+function deleteFolder(name){
+ if(Object.keys(data.folders).length===1)return alert("နောက်ဆုံး Folder ကို မဖျက်နိုင်ပါ။");
+ if(confirm(`"${name}" ကို ဖျက်မလား?`)){delete data.folders[name];if(data.active===name)data.active=Object.keys(data.folders)[0];save();render()}
+}
+function newNote(){
+ if(!data.active)return newFolder();
+ const choice=prompt("1 = Text\n2 = Title\n3 = Image\n\nရွေးပါ:");
+ if(choice==="1"){openModal("စာသားအသစ်",null)}
+ else if(choice==="2"){openModal("ခေါင်းစဉ်အသစ်","title")}
+ else if(choice==="3"){const x={type:"image",text:"",src:""};data.folders[data.active].push(x);save();render();replaceImage(data.folders[data.active].length-1)}
+}
+function openModal(label,mode){
+ editing={index:null,mode:mode==="title"?"title":"text"};document.getElementById("modalTitle").textContent=label;
+ document.getElementById("editTitle").value=mode==="title"?"":"";
+ document.getElementById("editText").value="";
+ document.getElementById("editTitle").style.display=mode==="title"?"block":"none";
+ document.getElementById("editText").style.display=mode==="title"?"none":"block";
+ document.getElementById("modal").classList.add("open");document.getElementById("editTitle").focus();
+}
+function editItem(i){
+ const x=activeItems()[i];editing={index:i,mode:x.type};
+ document.getElementById("modalTitle").textContent=x.type==="title"?"ခေါင်းစဉ်ပြင်ရန်":"စာသားပြင်ရန်";
+ document.getElementById("editTitle").style.display=x.type==="title"?"block":"none";document.getElementById("editText").style.display=x.type==="title"?"none":"block";
+ document.getElementById("editTitle").value=x.title||"";document.getElementById("editText").value=x.text||"";document.getElementById("modal").classList.add("open");
+}
+function closeModal(){document.getElementById("modal").classList.remove("open");editing=null}
+function saveModal(){
+ const i=editing.index, arr=activeItems();
+ if(editing.mode==="title"){const t=document.getElementById("editTitle").value.trim();if(!t)return;const obj={type:"title",title:t,text:t};i===null?arr.push(obj):arr[i]=obj}
+ else{const t=document.getElementById("editText").value.trim();if(!t)return;const obj={type:"text",text:t};i===null?arr.push(obj):arr[i]=obj}
+ save();closeModal();render();toast("Saved ✓");
+}
+function removeItem(i){if(confirm("ဒီ item ကို ဖျက်မလား?")){activeItems().splice(i,1);save();render()}}
+async function copyText(i){
+ const x=activeItems()[i],t=x.type==="title"?x.title:x.text;
+ try{await navigator.clipboard.writeText(t);toast("Copied ✓")}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();toast("Copied ✓")}
+}
+function replaceImage(i){
+ const input=document.createElement("input");input.type="file";input.accept="image/*";input.onchange=()=>{
+  const f=input.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{activeItems()[i].src=reader.result;save();render();toast("Image saved ✓")};reader.readAsDataURL(f)
+ };input.click()
+}
+function preview(src){const w=window.open("");w.document.write(`<title>Image Preview</title><style>body{margin:0;background:#111;display:grid;place-items:center;height:100vh}img{max-width:95%;max-height:95%}</style><img src="${src}">`)}
+function toggleTheme(){data.dark=!data.dark;document.documentElement.style.setProperty("--bg",data.dark?"#0b1120":"#f4f7fb");document.documentElement.style.setProperty("--panel",data.dark?"#111827":"#fff");document.documentElement.style.setProperty("--text",data.dark?"#e5e7eb":"#172033");document.documentElement.style.setProperty("--border",data.dark?"#334155":"#e2e8f0");save()}
+function exportJSON(){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="notes-backup.json";a.click();URL.revokeObjectURL(a.href)}
+document.getElementById("jsonFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.folders)throw 0;data=d;save();render();toast("Restored ✓")}catch{alert("Backup file မမှန်ပါ။")}};r.readAsText(f)}
+document.getElementById("txtFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const lines=r.result.split(/\r?\n/),folders={General:[]};let cur="General";lines.forEach(line=>{const s=line.trim();if(!s)return;const m=s.match(/^folder\s+(.+)/i);if(m){cur=m[1].trim();folders[cur] ||= []}else folders[cur].push({type:"text",text:s})});data.folders=folders;data.active=Object.keys(folders)[0];save();render();toast("TXT imported ✓")};r.readAsText(f)}
+function clearAll(){if(confirm("အားလုံးဖျက်ပြီး အစကနေစမလား?")){data={folders:{General:[]},active:"General",dark:false};save();render()}}
+document.documentElement.style.setProperty("--bg",data.dark?"#0b1120":"#f4f7fb");document.documentElement.style.setProperty("--panel",data.dark?"#111827":"#fff");document.documentElement.style.setProperty("--text",data.dark?"#e5e7eb":"#172033");document.documentElement.style.setProperty("--border",data.dark?"#334155":"#e2e8f0");
+render();
+</script>
+</body>
+</html>
